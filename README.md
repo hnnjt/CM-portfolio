@@ -10,3 +10,9 @@ I will be analyzing old school hip vs modern hiphop. I have two playlists that i
 An already interesting finding is that the modern playlist is shorter in total length then the old school playlist. Even though the modern playlist contains more songs. Could this mean that the younger people who the modern playlist songs are created for do not like the longer songs anymore? is this just a trend? or is this also the case when you compare the length of songs for other genres. Although all very interesting things to analyze that will be too broad for the scope of this project.
 
 I will analyze what the most obvious differences are between music made in the 90s (old school) and made in the past decade (modern). 
+
+
+## Visualisations 
+
+
+
