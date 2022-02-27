@@ -1,7 +1,5 @@
 # CM-portfolio
 
-PLEASE DO NOT SHOW THIS PORTFOLIO IN CLASS
-
 Growing up i have always been listening to all sorts of music. The songs that i did seem to like the most are hip hop songs. I am more of a fan of the older hip hop songs which where trending in the 90s. I think the reason for this is because i feel like they tended to put much more meaning behind the songs then they do nowadays. Also i seem to like the artists like J.cole which would be considered as a modern rapper today to have the best songs. I think the reason for this is because he is so influenced by these 90s artists.Although i do think that i know why i like the 90s hip hop songs more then modern hip hop, i think it will be very interesting to analyze what else is different between these two genres. 
 
 
