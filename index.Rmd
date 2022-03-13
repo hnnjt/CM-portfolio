@@ -1,0 +1,547 @@
+---
+title: "Computational Musicology 2021/2022"
+output: 
+  flexdashboard::flex_dashboard:
+    storyboard: true
+---
+
+### Introduction
+
+Growing up i have always been listening to all sorts of music. The songs that i did seem to like the most are hip hop songs. I am more of a fan of the older hip hop songs which where trending in the 90s. I think the reason for this is because i feel like they tended to put much more meaning behind the songs then they do nowadays. Also i seem to like the artists like J.cole which would be considered as a modern rapper today to have the best songs. I think the reason for this is because he is so influenced by these 90s artists.Although i do think that i know why i like the 90s hip hop songs more then modern hip hop, i think it will be very interesting to analyze what else is different between these two genres. 
+
+
+I will be analyzing old school hip vs modern hiphop. I have two playlists that i will use, one is called 'Old School Hiphop' it contains 192 songs and has a total length of 13 hours and 30 minutes. Some of the artists that you will find a lot in this playlist are: Tupac, DMX and Nas. These were the rappers that we most populair in the 90s. The other playlist is called "Modern hiphop". It contains 206 songs and the total length is 10 hours and 12 minutes. This playlist contains music created in the past decade. Some of the artists that are mostly on this playlist are: Pop smoke, J.Cole and Tory lanez. I do not think that there are any particial strange songs in the playlists i have chosen. All the songs i would consider to be in the right place in the playlist. 
+
+An already interesting finding is that the modern playlist is shorter in total length then the old school playlist. Even though the modern playlist contains more songs. Could this mean that the younger people who the modern playlist songs are created for do not like the longer songs anymore? is this just a trend? or is this also the case when you compare the length of songs for other genres. Although all very interesting things to analyze that will be too broad for the scope of this project.
+
+I will analyze what the most obvious differences are between music made in the 90s (old school) and made in the past decade (modern). 
+
+
+
+
+```{r}
+knitr::opts_chunk$set(echo = FALSE)
+
+require(httr)
+require(jsonlite)
+require(plyr)
+require(glmnet)
+library(spotifyr)
+library(knitr)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(kableExtra)
+library(plotly)
+library(spotifyr)
+library(compmus)
+
+Sys.setenv(SPOTIFY_CLIENT_ID = '269036b6875046f7ab4e49c8f9270a1b')
+Sys.setenv(SPOTIFY_CLIENT_SECRET = '75202597e596483e9dd3c19ec1c2a296')
+access_token <- get_spotify_access_token()
+```
+
+```{r}
+knitr::opts_chunk$set(echo = FALSE)
+
+tophits <- get_playlist("0mt5o7nN6PJTyxJIqzgvJr")
+
+#modern
+track_list <- tophits[["tracks"]]
+item_list <- track_list[["items"]]
+track_id <- item_list[,16]
+track_id <- as.data.frame(track_id)
+num_tracks <- count(track_id)
+#num_tracks <- as.integer(num_tracks)
+
+
+#Iterating over track ID's
+a <- sapply(track_id[1:100, ], get_track_audio_features)
+b <- as.data.frame(a)
+zz <- unlist(a)
+zm <- data.frame(t(matrix(zz, nrow = 18)))
+colnames(zm) <- row.names(b)
+
+music2 <- mutate(zm,
+danceability = as.numeric(danceability),
+energy = as.numeric(energy),
+valence = as.numeric(valence))
+```
+
+### Chordogram
+
+```{r}
+circshift <- function(v, n) {
+  if (n == 0) v else c(tail(v, n), head(v, -n))
+}
+
+#      C     C#    D     Eb    E     F     F#    G     Ab    A     Bb    B
+major_chord <-
+  c(   1,    0,    0,    0,    1,    0,    0,    1,    0,    0,    0,    0)
+minor_chord <-
+  c(   1,    0,    0,    1,    0,    0,    0,    1,    0,    0,    0,    0)
+seventh_chord <-
+  c(   1,    0,    0,    0,    1,    0,    0,    1,    0,    0,    1,    0)
+
+major_key <-
+  c(6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88)
+minor_key <-
+  c(6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17)
+
+chord_templates <-
+  tribble(
+    ~name, ~template,
+    "Gb:7", circshift(seventh_chord, 6),
+    "Gb:maj", circshift(major_chord, 6),
+    "Bb:min", circshift(minor_chord, 10),
+    "Db:maj", circshift(major_chord, 1),
+    "F:min", circshift(minor_chord, 5),
+    "Ab:7", circshift(seventh_chord, 8),
+    "Ab:maj", circshift(major_chord, 8),
+    "C:min", circshift(minor_chord, 0),
+    "Eb:7", circshift(seventh_chord, 3),
+    "Eb:maj", circshift(major_chord, 3),
+    "G:min", circshift(minor_chord, 7),
+    "Bb:7", circshift(seventh_chord, 10),
+    "Bb:maj", circshift(major_chord, 10),
+    "D:min", circshift(minor_chord, 2),
+    "F:7", circshift(seventh_chord, 5),
+    "F:maj", circshift(major_chord, 5),
+    "A:min", circshift(minor_chord, 9),
+    "C:7", circshift(seventh_chord, 0),
+    "C:maj", circshift(major_chord, 0),
+    "E:min", circshift(minor_chord, 4),
+    "G:7", circshift(seventh_chord, 7),
+    "G:maj", circshift(major_chord, 7),
+    "B:min", circshift(minor_chord, 11),
+    "D:7", circshift(seventh_chord, 2),
+    "D:maj", circshift(major_chord, 2),
+    "F#:min", circshift(minor_chord, 6),
+    "A:7", circshift(seventh_chord, 9),
+    "A:maj", circshift(major_chord, 9),
+    "C#:min", circshift(minor_chord, 1),
+    "E:7", circshift(seventh_chord, 4),
+    "E:maj", circshift(major_chord, 4),
+    "G#:min", circshift(minor_chord, 8),
+    "B:7", circshift(seventh_chord, 11),
+    "B:maj", circshift(major_chord, 11),
+    "D#:min", circshift(minor_chord, 3)
+  )
+
+key_templates <-
+  tribble(
+    ~name, ~template,
+    "Gb:maj", circshift(major_key, 6),
+    "Bb:min", circshift(minor_key, 10),
+    "Db:maj", circshift(major_key, 1),
+    "F:min", circshift(minor_key, 5),
+    "Ab:maj", circshift(major_key, 8),
+    "C:min", circshift(minor_key, 0),
+    "Eb:maj", circshift(major_key, 3),
+    "G:min", circshift(minor_key, 7),
+    "Bb:maj", circshift(major_key, 10),
+    "D:min", circshift(minor_key, 2),
+    "F:maj", circshift(major_key, 5),
+    "A:min", circshift(minor_key, 9),
+    "C:maj", circshift(major_key, 0),
+    "E:min", circshift(minor_key, 4),
+    "G:maj", circshift(major_key, 7),
+    "B:min", circshift(minor_key, 11),
+    "D:maj", circshift(major_key, 2),
+    "F#:min", circshift(minor_key, 6),
+    "A:maj", circshift(major_key, 9),
+    "C#:min", circshift(minor_key, 1),
+    "E:maj", circshift(major_key, 4),
+    "G#:min", circshift(minor_key, 8),
+    "B:maj", circshift(major_key, 11),
+    "D#:min", circshift(minor_key, 3)
+  )
+# Chordogram Dear Mama
+twenty_five <-
+  get_tidy_audio_analysis("6tDxrq4FxEL2q15y37tXT9") %>%
+  compmus_align(sections, segments) %>%
+  select(sections) %>%
+  unnest(sections) %>%
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "mean", norm = "manhattan"
+      )
+  )
+
+# Chordogram Hey Big Hear 
+twenty_four <-
+  get_tidy_audio_analysis("3FWIAl04a9ySFhk4HH15ov") %>%
+  compmus_align(sections, segments) %>%
+  select(sections) %>%
+  unnest(sections) %>%
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "mean", norm = "manhattan"
+      )
+  )
+```
+
+```{r}
+twenty_five %>% 
+  compmus_match_pitch_template(
+    key_templates,         # Change to chord_templates if descired
+    method = "euclidean",  # Try different distance metrics
+    norm = "manhattan"     # Try different norms
+  ) %>%
+  ggplot(
+    aes(x = start + duration / 2, width = duration, y = name, fill = d)
+  ) +
+  geom_tile() +
+  scale_fill_viridis_c(guide = "none") +
+  theme_minimal() +
+  labs(title= 'Chordogram Dear Mama', x = "Time (s)", y = "")
+
+
+```
+
+### Chordogram Discussion
+
+I chose to do a chordogram  Dear Mama by Tupas because this song kind of a has a slow and relaxed beat when compared to other songs from the Old School Rap playlist. At t=0 - t=15 yellow bars are visible, meaning there is a ''change'' in the beat. If you listen to the song you hear this high pitches background song in the beginning that does not occur in the rest of the song. C minor is the most frequent used key, because this row of bars is dark blue. 
+
+<!-- I remember hearing  the song 'Hey Big Head' by Jack Harlow a couple of days ago. Throughout the whole song there is this high kind of sounds being played, which does make the song very catchy. When looking at the chordogram you can find the yellow bars throughout the whole song, just like in the beginning of the song 'Dear Mama'. So i think that the yellow bars must be some kind of energy like feature in contrast to the other keys. -->
+
+### Track audio Summaries
+
+```{r}
+modern <-
+  get_playlist_audio_features(
+    "thesoundsofspotify",
+    "0mt5o7nN6PJTyxJIqzgvJr" #modern
+  ) %>%
+  slice(1:30) %>%
+  add_audio_analysis()
+
+oldschool <-
+  get_playlist_audio_features(
+    "thesoundsofspotify",
+    "2nJsRFJkr7BegSfKpG2d7O" #oldschool
+  ) %>%
+  slice(1:30) %>%
+  add_audio_analysis()
+jazz <-
+  modern %>%
+  mutate(genre = "Modern") %>%
+  bind_rows(oldschool %>% mutate(genre = "Old School"))
+```
+
+```{r}
+jazz %>%
+  mutate(
+    sections =
+      map(
+        sections,                                    # sections or segments
+        summarise_at,
+        vars(tempo, loudness, duration),             # features of interest
+        list(section_mean = mean, section_sd = sd)   # aggregation functions
+      )
+  ) %>%
+  unnest(sections) %>%
+  ggplot(
+    aes(
+      x = tempo,
+      y = tempo_section_sd,
+      colour = genre,
+      alpha = loudness
+    )
+  ) +
+  geom_point(aes(size = duration / 60)) +
+  geom_rug() +
+  theme_minimal() +
+  ylim(0, 5) +
+  labs( title="Track audio summary ",
+    x = "Mean Tempo (bpm)",
+    y = "SD Tempo",
+    colour = "Genre",
+    size = "Duration (min)",
+    alpha = "Volume (dBFS)"
+  )
+```
+
+
+
+### Track audio summary discussion
+
+The oldschool playlist seems to have a clear mean tempo around 90 bpm. For the modern hiphop playlist there is not a clear mean, meaning there is a wide variety in these songs which is true. Modern hip hop songs seem to be either heavily influenced by old school hiphong or by modern pop. The modern hiphop songs seem to have a smaller size, indicating the lengt of the songs. This also makes sense, the total length of the modern hip hop songs is about 3 hours less then oldschool hip (and the modern hip hop playlist has more songs).Both playlists have a lot of songs that are transparent in the plot, meaning they do not have a lot of volume. I think it is more common for pop songs to have higher volume.
+
+### Timbre coefficents 
+
+```{r}
+jazz %>%
+  mutate(
+    timbre =
+      map(
+        segments,
+        compmus_summarise,
+        timbre,
+        method = "mean"
+      )
+  ) %>%
+  select(genre, timbre) %>%
+  compmus_gather_timbre() %>%
+  ggplot(aes(x = basis, y = value, fill = genre)) +
+  geom_violin() +
+  scale_fill_viridis_d() +
+  labs(x = "Spotify Timbre Coefficients", y = "", fill = "Genre")
+```
+
+
+### Timbre coefficents discussion
+
+The loudness for bot playlists seem to be similar in c01.The only ''big'' difference i can see is in c02, the oldschool playlist seems to have a wider spread. 
+
+
+### Cepstogram 
+
+```{r}
+
+#cepsogram sicko mode 
+bzt <-
+  get_tidy_audio_analysis("2xLMifQCjDGFmkHkpNLD9h") %>% # Change URI.
+  compmus_align(bars, segments) %>%                     # Change `bars`
+  select(bars) %>%                                      #   in all three
+  unnest(bars) %>%                                      #   of these lines.
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  ) %>%
+  mutate(
+    timbre =
+      map(segments,
+        compmus_summarise, timbre,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  )
+
+bzt %>%
+  compmus_gather_timbre() %>%
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = basis,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  labs(title = "Sicko Mode by Travis Scott (Modern Playlist)", x = "Time (s)", y = NULL, fill = "Magnitude") +
+  scale_fill_viridis_c() +
+  theme_classic()
+
+
+
+```
+
+
+### Cepstogram discussion 
+
+I analyzed the song Sicko Mode by Travis Scott because it was a very popular song and i was interested to see if i could find anything interesting on why this song was so catchy and popular.As you can see there are a lot of changes in timbre components. In the first 30 seconds there is a lot of magnitude in C03. Then there is a shift to c02.  Towards the end of the song there again is a lot of magnitude in c02. 
+
+
+### Density Plots
+```{r}
+tophits <- get_playlist("0mt5o7nN6PJTyxJIqzgvJr")
+
+#modern
+track_list <- tophits[["tracks"]]
+item_list <- track_list[["items"]]
+track_id <- item_list[,16]
+track_id <- as.data.frame(track_id)
+num_tracks <- count(track_id)
+
+
+#Iterating over track ID's
+a <- sapply(track_id[1:100, ], get_track_audio_features)
+b <- as.data.frame(a)
+zz <- unlist(a)
+zm <- data.frame(t(matrix(zz, nrow = 18)))
+colnames(zm) <- row.names(b)
+
+music2 <- mutate(zm,
+danceability = as.numeric(danceability),
+energy = as.numeric(energy),
+valence = as.numeric(valence),
+playlist = "Modern HipHop")
+
+# all the density plots
+plotly = ggplot(music2) +
+  geom_density(aes(x = danceability, fill = "red"), alpha = 0.4) +
+  geom_density(aes(x = energy,fill = "purple"), alpha = 0.4) +
+  geom_density(aes(x = valence, fill = "green"), alpha = 0.4) +
+  labs(title= "Modern playlist", 
+         x = "Measure of Attribute",
+         y = "Frequency", fill = "Song Attribute") +
+  scale_fill_manual(values = c("red", "purple", "green"), labels = c("Valence", "Energy", "Valence")) 
+ggplotly(plotly)
+
+ 
+tophits <- get_playlist("2nJsRFJkr7BegSfKpG2d7O")
+
+#old
+track_list <- tophits[["tracks"]]
+item_list <- track_list[["items"]]
+track_id <- item_list[,16]
+track_id <- as.data.frame(track_id)
+num_tracks <- count(track_id)
+
+
+#Iterating over track ID's
+a <- sapply(track_id[1:100, ], get_track_audio_features)
+b <- as.data.frame(a)
+zz <- unlist(a)
+zm <- data.frame(t(matrix(zz, nrow = 18)))
+colnames(zm) <- row.names(b)
+
+music3 <- mutate(zm,
+danceability = as.numeric(danceability),
+energy = as.numeric(energy),
+valence = as.numeric(valence),
+playlist = "Old HipHop")
+
+
+# all the density plots
+plotly = ggplot(music3) +
+  geom_density(aes(x = danceability, fill = "red"), alpha = 0.4) +
+  geom_density(aes(x = energy,fill = "purple"), alpha = 0.4) +
+  geom_density(aes(x = valence, fill = "green"), alpha = 0.4) +
+  labs(title="Old school",
+         x = "Measure of Attribute",
+         y = "Frequency", fill = "Song Attribute") +
+  scale_fill_manual(values = c("red", "purple", "green"), labels = c("Valence", "Energy", "Valence")) 
+ggplotly(plotly)
+
+```
+
+
+
+
+
+### Scatterplot
+```{r}
+music4 = bind_rows(music2,music3)
+#scatter plot 
+plotly = ggplot(music4) +
+  geom_point(aes(x = energy, y= danceability), alpha = 0.4, fill="red") +
+  facet_wrap(~playlist)
+  #labs(title = "Modern Playlist ",
+        # x = "Measure of Attribute",
+         #y = "Frequency", fill = "Song Attribute") +
+  #scale_fill_manual(values = c("blue", "purple", "green"), labels = c("Valence", "Energy", "Valence")) 
+ggplotly(plotly)
+```
+
+### Chromograms {data-commentary-width=150}
+``` {r} 
+# CHROMOGRAM SICKOMIDE
+#MODERN SICKO MODE
+wood <-
+  get_tidy_audio_analysis("2xLMifQCjDGFmkHkpNLD9h") %>%
+  select(segments) %>%
+  unnest(segments) %>%
+  select(start, duration, pitches)
+
+wood %>%
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) %>%
+  compmus_gather_chroma() %>% 
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  labs(title = "Modern playlist: Sicko Mode by Travis Scott", x = "Time (s)", y = NULL, fill = "Magnitude") +
+  theme_minimal() +
+  scale_fill_viridis_c()
+
+
+# #OLD ALL EYES ON ME CHHROMOGRAM
+# wood <-
+#   get_tidy_audio_analysis("4VQNCzfZ3MdHEwwErNXpBo") %>%
+#   select(segments) %>%
+#   unnest(segments) %>%
+#   select(start, duration, pitches)
+# 
+# wood %>%
+#   mutate(pitches = map(pitches, compmus_normalise, "euclidean")) %>%
+#   compmus_gather_chroma() %>% 
+#   ggplot(
+#     aes(
+#       x = start + duration / 2,
+#       width = duration,
+#       y = pitch_class,
+#       fill = value
+#     )
+#   ) +
+#   geom_tile() +
+#   labs(title = "Old School playlist: All Eyez On Me by Tupac", x = "Time (s)", y = NULL, fill = "Magnitude") +
+#   theme_minimal() +
+#   scale_fill_viridis_c()
+# 
+
+ 
+```
+
+### Chromogram discussion
+I analyzed the song Sicko Mode by Travis Scott because it was a very popular song and i was interested to see if i could find anything interesting on why this song was so catchy and popular. When first listening to the song i noticed that a lot of beats were mixed and a certain beat occured a lot throughout the song. For example on miniute 3.33. When looking at the chromogram i saw that when this beat which i was talking about for example on 3.33 represented it self as a lot of energy on C#|db
+
+
+
+
+
+### similarity {data-commentary-width=150}
+```{r}
+bzt %>%
+  compmus_self_similarity(timbre, "manhattan") %>%
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_fixed() +
+  scale_fill_viridis_c(guide = "none") +
+  theme_classic() +
+  labs(title = "similairty", x = "", y = "")
+```
+
+### Conclusion
+
+I used 100 tracks for each playlist in my dataset. It is interesting to see that both
+playlists seem to have a high valance for a lot of tracks. I personally thought that this
+would be lower for the old school songs because I feel like they tend to be more
+negative (e.g. Rapping about violence). The old-school playlist scores lower on
+energy. I also expected this because these songs have a slower beat. And modern
+hip hop songs are a bit more upbeat. Also, the danceability for the songs in the oldschool playlist seem to be higher. 
+
+
+Definitons of variables used:
+Danceability: Describes how suitable a track is for dancing based on a combination of
+musical elements including tempo, rhythm stability, beat strength, and overall regularity
+
+Valance: A measure from 0.0 to 1.0 describing the musical positiveness conveyed by a track.
+Tracks with high valence sound more positive (e.g. happy, cheerful, euphoric), while tracks
+with low valence sound more negative (e.g. sad, depressed, angry)
+
+Energy: Energy is a measure from 0.0 to 1.0 and represents a perceptual measure of
+intensity and activity. Typically, energetic tracks feel fast, loud, and noisy. For example,
+death metal has high energy, while a Bach prelude scores low on the scale.
+Source: rpub
