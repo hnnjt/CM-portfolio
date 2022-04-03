@@ -1,0 +1,976 @@
+---
+title: "Computational Musicology 2021/2022 "
+author: "Hanane el Aajati"
+date: "April 2022"
+output:
+    flexdashboard::flex_dashboard:
+        storyboard: true
+        theme: united
+       
+---
+
+```{r source, echo = FALSE, messages = FALSE}
+library(tidyverse)
+require(httr)
+require(jsonlite)
+require(plyr)
+require(glmnet)
+library(spotifyr)
+library(knitr)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(kableExtra)
+library(plotly)
+library(spotifyr)
+library(compmus)
+library(heatmaply)
+library(tidymodels)
+library(tidyverse)
+library(ggpubr)
+```
+
+### Introduction {data-commentary-width=400}
+
+<h1> New School vs Old School Hip Hop - An analysis using the Spotify API</h1>
+
+Growing up i have always been listening to all sorts of music. The songs that i do seem to like the most are hip hop songs. I am more of a fan of the older hip hop songs which were trending in the late 80s and mid 90s. I think the reason for this is because i feel like they tended to put much more meaning behind the songs then they do nowadays. Also i like artists like J.cole, which would be considered as a modern rapper today, to have the best songs. The reason i like artists like him te most is because he is influenced by 90's artists. 
+
+
+I know that there is a lot of debate on, for example social media, about which hiphop era has the best music. I thought that it would be interesting to analyze what exactly the difference is between new school and old school hip hop. In order to analyze this i decided to choose two rappers that best represent new school and old school hip hop. 
+
+The rapper that is considered the number one artist in the New School hip hop scene, by ranking.com is  [Kendrick Lamar](https://www.ranking.com). I will be using the 'This is Kendrick Lamar' playlist on Spotify. The playlist contains 45 songs. I chose to use this playlist because it has been carefully created by Spotify and i think that would be a good way to represent Kendrick lamar (and therefore also New School Hip Hop).
+
+According to ranking.com [Tupac Shakur](https://www.ranking.com) is considered the highest ranked artist for old school hiphop. To analyze his songs i will use the "This is 2pac" playlist on Spotify. This playlist contains 45 song. I chose to use this playlist for the same reason as why i chose the Kendrick Lamar playlist. 
+
+I think that the 'This is Kendrick Lamar' playlist will have higher energy and danceability. This because new school hiphop is influenced a lot by pop culture. I also think that the tempo for the 'This is Tupac' playlist will be slower. This because i know that a lot of 90s hiphop songs have a slower beat to them when i listen to it in comparison with the new school hip hop songs. 
+
+
+
+
+
+<script src="https://open.scdn.co/cdn/build/embed-legacy/vendor~embed-legacy.37d9e073.js"></script>
+
+
+<center>
+
+<img src="Git CM/2pacKL.jpeg" >
+
+
+
+
+
+Figure 1: This is a famous illustration within the hip hop culture. It shows Tupac Shakur looking at a young Kendrick Lamar. 
+
+</center>
+
+
+***
+#### Background information about the artists
+__Kendrick Lamar__
+Thirteen Grammy Award-winning rapper Kendrick Lamar is only in his early thirties, but he has already won the Pulitzer Prize for music, produced the soundtrack to one of the greatest feature films of this century, Black Panther, and has already been named one of the of Time's 100 most influential people in the world.
+
+As a lyricist and recording artist, he has also made a name for himself as a formidable opponent of oppression. With his poetic lyrics, his politically charged songs and his radical performances, Lamar tirelessly calls for change and has become an example for millions of fans around the world [1](https://www.singeluitgeverijen.nl/volt/boek/kendrick-lamar/#:~:text=Kendrick%20Lamar%20%E2%80%93%20de%20biografie%20is,als%20de%20King%20of%20Rap.). 
+
+
+__Tupac Shakur__
+Tupac Shakur was an American rapper and actor who came to embody the 1990s gangsta-rap aesthetic, and who in death became an icon symbolizing noble struggle. He has sold 75 million albums to date, making him one of the top-selling artists of all time.
+
+Tupac began his music career  with a cause to articulate the travails and injustices endured by many African Americans. His skill in doing so made him a spokesperson not just for his own generation but for subsequent ones who continue to face the same struggle for equality [2](https://www.biography.com/musician/tupac-shakur).
+
+```{r}
+# Import packages
+knitr::opts_chunk$set(echo = FALSE)
+
+require(httr)
+require(jsonlite)
+require(plyr)
+require(glmnet)
+library(spotifyr)
+library(knitr)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(kableExtra)
+library(plotly)
+library(spotifyr)
+library(compmus)
+library(heatmaply)
+library(tidymodels)
+library(tidyverse)
+library(ggpubr)
+
+Sys.setenv(SPOTIFY_CLIENT_ID = '269036b6875046f7ab4e49c8f9270a1b')
+Sys.setenv(SPOTIFY_CLIENT_SECRET = '75202597e596483e9dd3c19ec1c2a296')
+access_token <- get_spotify_access_token()
+```
+
+
+### Track Level Features {data-commentary-width=800}
+
+
+#### Density plots
+
+```{r}
+tophits <- get_playlist("37i9dQZF1DX5EkyRFIV92g")
+
+#modern kendrick
+plot2 = 
+track_list <- tophits[["tracks"]]
+item_list <- track_list[["items"]]
+track_id <- item_list[,16]
+track_id <- as.data.frame(track_id)
+num_tracks <- count(track_id)
+
+
+#Iterating over track ID's
+a <- sapply(track_id[1:100, ], get_track_audio_features)
+b <- as.data.frame(a)
+zz <- unlist(a)
+zm <- data.frame(t(matrix(zz, nrow = 18)))
+colnames(zm) <- c("danceability",  "energy" , "key" , "loudness", "mode", "speechiness"  ,    "acousticness",  "instrumentalness", "liveness" ,     "valence"     ,    
+ "tempo"      ,      "type"        ,     "id"      ,         "uri"    ,          "track_href"   ,   
+"analysis_url" ,    "duration_ms"   ,   "time_signature")
+
+
+music2 <- mutate(zm,
+danceability = as.numeric(danceability),
+energy = as.numeric(energy),
+valence = as.numeric(valence),
+playlist = "Modern HipHop")
+
+# all the density plots
+plot2 = ggplot(music2) +
+  geom_density(aes(x = danceability, fill = "Danceability"), alpha = 0.4) +
+  geom_density(aes(x = energy,fill = "Energy"), alpha = 0.4) +
+  geom_density(aes(x = valence, fill = "Valence"), alpha = 0.4) +
+  labs(title= "This is Kendrick Lamar", 
+         x = "Measure of Attribute",
+         y = "Frequency", fill = "Song Attribute") +
+  scale_fill_manual(values = c("red", "orange", "blue"), labels = c("Danceability", "Energy", "Valence")) 
+ggplotly(plot2)
+
+ 
+
+```
+
+```{r}
+tophits <- get_playlist("37i9dQZF1DZ06evO17QsVi")
+
+#old pac
+track_list <- tophits[["tracks"]]
+item_list <- track_list[["items"]]
+track_id <- item_list[,16]
+track_id <- as.data.frame(track_id)
+num_tracks <- count(track_id)
+
+
+#Iterating over track ID's
+a <- sapply(track_id[1:100, ], get_track_audio_features)
+b <- as.data.frame(a)
+zz <- unlist(a)
+zm <- data.frame(t(matrix(zz, nrow = 18)))
+colnames(zm) <- c("danceability",  "energy" , "key" , "loudness", "mode",   "speechiness"  ,    "acousticness"  ,   "instrumentalness", "liveness"    ,     "valence"     ,    
+ "tempo"      ,      "type"        ,     "id"      ,         "uri"    ,          "track_href"   ,   
+"analysis_url" ,    "duration_ms"   ,   "time_signature")
+
+music3 <- mutate(zm,
+danceability = as.numeric(danceability),
+energy = as.numeric(energy),
+valence = as.numeric(valence),
+playlist = "Old HipHop")
+
+
+# all the density plots
+plotly = ggplot(music3) +
+  geom_density(aes(x = danceability, fill = "Danceability"), alpha = 0.4) +
+  geom_density(aes(x = energy,fill = "Energy"), alpha = 0.4) +
+  geom_density(aes(x = valence, fill = "Valance"), alpha = 0.4) +
+  labs(title="This is Tupac Shakur",
+         x = "Measure of Attribute",
+         y = "Frequency", fill = "Song Attribute") +
+  scale_fill_manual(values = c("red", "orange", "blue"), labels = c("Danceability", "Energy", "Valence")) 
+ggplotly(plotly)
+
+```
+
+```{r}
+grammy <- get_playlist_audio_features("", "37i9dQZF1DX5EkyRFIV92g")
+edison <- get_playlist_audio_features("", "37i9dQZF1DZ06evO17QsVi")
+```
+
+
+
+```{r}
+awards <-
+  bind_rows(
+    grammy %>% mutate(category = "Kendrick Lamar"),
+    edison %>% mutate(category = "Tupac Shakur")
+  )
+```
+
+```{r}
+# get audio for track level
+grammy <- get_playlist_audio_features("", "37i9dQZF1DX5EkyRFIV92g") # kendrick lamar
+tupac <- get_playlist_audio_features("", "37i9dQZF1DZ06evO17QsVi") #2pac
+```
+
+#### Scatterplot
+
+```{r Scatterplot }
+#can i add track names here?
+# make the plot red/orange oid
+
+
+
+plot1 = 
+awards %>%                    # Start with awards.
+  mutate(
+    mode = ifelse(mode == 0, "Minor", "Major")
+  ) %>%
+  ggplot(                     # Set up the plot.
+    aes(
+      x = valence,
+      y = energy,
+      size = loudness,
+      colour = mode
+    )
+  ) +
+  geom_point() +              # Scatter plot.
+  geom_rug(size = 0.1) +      # Add 'fringes' to show data distribution.
+  geom_text(                  # Add text labels from above.
+    aes(
+      x = valence,
+      y = energy,
+      label = label
+    ),
+    data = 
+      tibble(
+        label = c(".", "."),
+        category = c("Tupac Shakur", "Kendrick Lamar"),
+        valence = c(0.090, 0.123),
+        energy = c(0.101, 0.967)
+      ),
+    colour = "black",         # Override colour (not mode here).
+    size = 3,                 # Override size (not loudness here).
+    hjust = "left",           # Align left side of label with the point.
+    vjust = "bottom",         # Align bottom of label with the point.
+    nudge_x = -0.05,          # Nudge the label slightly left.
+    nudge_y = 0.02            # Nudge the label slightly up.
+  ) +
+  facet_wrap(~category) +     # Separate charts per playlist.
+  scale_x_continuous(         # Fine-tune the x axis.
+    limits = c(0, 1),
+    breaks = c(0, 0.50, 1),   # Use grid-lines for quadrants only.
+    minor_breaks = NULL       # Remove 'minor' grid-lines.
+  ) +
+  scale_y_continuous(         # Fine-tune the y axis in the same way.
+    limits = c(0, 1),
+    breaks = c(0, 0.50, 1),
+    minor_breaks = NULL
+  ) +
+  scale_colour_brewer(        # Use the Color Brewer to choose a palette.
+    type = "qual",            # Qualitative set.
+    palette = "Paired"        # Name of the palette is 'Paired'.
+  ) +
+  scale_size_continuous(      # Fine-tune the sizes of each point.
+    trans = "exp",            # Use an exp transformation to emphasise loud.
+    guide = "none"            # Remove the legend for size.
+  ) +
+  theme_light() +             # Use a simpler theme.
+  labs(                       # Make the titles nice.
+    x = "Danceability",
+    y = "Energy",
+    colour = "Mode"
+  )
+ggplotly(plot1)
+```
+
+***
+
+#### Analysis of the Density plots
+I have chosen to use a density plot because i think it gives a lot of interesting information. About what is happening in the playlist as a whole before looking at what is happening on tracklevel. Let's unplug what exactly is happening here. 
+
+
+__Danceability__ 
+
+Danceability describes how suitable a track is for dancing based on a combination of musical elements including tempo, rhythm stability, beat strength, and overall regularity. A value of 0.0 is least danceable and 1.0 is most danceable.
+
+Looking at the dancebility of the two playlists you can see that they both have a high dancebility. The *"This Is Kendrick Lamar"* playlist has a wider spread to it, meaning more songs in that playlist have a higher danceability. 
+
+
+__Energy__
+
+Energy is a measure from 0.0 to 1.0 and represents a perceptual measure of intensity and activity. Typically, energetic tracks feel fast, loud, and noisy.
+
+There is a very noticeable difference within the energy levels of the two playlists. The levels of energy are higher in the *"This is Kendrick Lamar"* playlist with a wider spread to it.
+
+
+__Valence__ 
+
+Valence is a measure from 0.0 to 1.0 describing the musical positiveness conveyed by a track. Tracks with high valence sound more positive (e.g. happy, cheerful, euphoric), while tracks with low valence sound more negative (e.g. sad, depressed, angry)
+
+The *"This is Tupac Shakur"* playlist  has some songs that have a higher valance than any of the other Kendrick Lamar songs. But The Kendrick lamar playlist has a wider spread in valance meaning overall more songs in the *"This is Kendrick Lamar"* playlist have more valence to it.
+
+#### Analysis of the scatter plot
+In the scatter plot we can see a display of the valence (size of the dots), energy (y-axis) and danceability (x-axis). You can see that the tracks with the highest valence are in the *'This is Tupac Shakur'* playlist. Looking at the y axis you can see that Kendrick lamar has a wider spread in energy within his songs. And also a wider spread in danceability. Tupac shakur also has more tracks with a minor mode. 
+
+### Chroma Features 
+
+
+#### Chromagrams 
+
+```{r Chroma gram}
+wood <-
+  get_tidy_audio_analysis("7KXjTSCq5nL1LoYtL7XAwS") %>%
+  select(segments) %>%
+  unnest(segments) %>%
+  select(start, duration, pitches)
+
+p1 = wood %>%
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) %>%
+  compmus_gather_chroma() %>% 
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  labs(title= " Humble by Kendrick Lamar", x = "Time (s)", y = NULL, fill = "Magnitude") +
+  theme_minimal() +
+  scale_fill_viridis_c()
+
+```
+
+
+```{r 2nd plot}
+wood <-
+  get_tidy_audio_analysis("0Z2J91b2iTGLVTZC4fKgxf") %>% # hit em up
+  select(segments) %>%
+  unnest(segments) %>%
+  select(start, duration, pitches)
+
+p2= wood %>%
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) %>%
+  compmus_gather_chroma() %>% 
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  labs(title = "Hit 'En Up  by 2Pac", x = "Time (s)", y = NULL, fill = "Magnitude") +
+  theme_minimal() +
+  scale_fill_viridis_c()
+```
+
+```{r fig.width = 10}
+ggarrange(p1,p2, ncol = 2, nrow=1)
+
+
+```
+
+#### Cepstograms 
+
+```{r}
+#cepsogram Humble
+bzt <-
+  get_tidy_audio_analysis("7KXjTSCq5nL1LoYtL7XAwS") %>% # Change URI.
+  compmus_align(bars, segments) %>%                     # Change `bars`
+  select(bars) %>%                                      #   in all three
+  unnest(bars) %>%                                      #   of these lines.
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  ) %>%
+  mutate(
+    timbre =
+      map(segments,
+        compmus_summarise, timbre,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  )
+
+p3= bzt %>%
+  compmus_gather_timbre() %>%
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = basis,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  labs(title = "Humble by Kendrick Lamar", x = "Time (s)", y = NULL, fill = "Magnitude") +
+  scale_fill_viridis_c() +
+  theme_classic()
+```
+
+
+```{r}
+#make these next to eachother
+#cepsogram hit em up
+bzt <-
+  get_tidy_audio_analysis("0Z2J91b2iTGLVTZC4fKgxf") %>% # Change URI.
+  compmus_align(bars, segments) %>%                     # Change `bars`
+  select(bars) %>%                                      #   in all three
+  unnest(bars) %>%                                      #   of these lines.
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  ) %>%
+  mutate(
+    timbre =
+      map(segments,
+        compmus_summarise, timbre,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  )
+
+p4 = bzt %>%
+  compmus_gather_timbre() %>%
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = basis,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  labs(title = "Hit 'em Up by 2Pac", x = "Time (s)", y = NULL, fill = "Magnitude") +
+  scale_fill_viridis_c() +
+  theme_classic()
+```
+
+```{r fig.width = 10}
+ggarrange(p3,p4, ncol = 2, nrow=1)
+
+```
+
+
+```{r}
+circshift <- function(v, n) {
+  if (n == 0) v else c(tail(v, n), head(v, -n))
+}
+
+#      C     C#    D     Eb    E     F     F#    G     Ab    A     Bb    B
+major_chord <-
+  c(   1,    0,    0,    0,    1,    0,    0,    1,    0,    0,    0,    0)
+minor_chord <-
+  c(   1,    0,    0,    1,    0,    0,    0,    1,    0,    0,    0,    0)
+seventh_chord <-
+  c(   1,    0,    0,    0,    1,    0,    0,    1,    0,    0,    1,    0)
+
+major_key <-
+  c(6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88)
+minor_key <-
+  c(6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17)
+
+chord_templates <-
+  tribble(
+    ~name, ~template,
+    "Gb:7", circshift(seventh_chord, 6),
+    "Gb:maj", circshift(major_chord, 6),
+    "Bb:min", circshift(minor_chord, 10),
+    "Db:maj", circshift(major_chord, 1),
+    "F:min", circshift(minor_chord, 5),
+    "Ab:7", circshift(seventh_chord, 8),
+    "Ab:maj", circshift(major_chord, 8),
+    "C:min", circshift(minor_chord, 0),
+    "Eb:7", circshift(seventh_chord, 3),
+    "Eb:maj", circshift(major_chord, 3),
+    "G:min", circshift(minor_chord, 7),
+    "Bb:7", circshift(seventh_chord, 10),
+    "Bb:maj", circshift(major_chord, 10),
+    "D:min", circshift(minor_chord, 2),
+    "F:7", circshift(seventh_chord, 5),
+    "F:maj", circshift(major_chord, 5),
+    "A:min", circshift(minor_chord, 9),
+    "C:7", circshift(seventh_chord, 0),
+    "C:maj", circshift(major_chord, 0),
+    "E:min", circshift(minor_chord, 4),
+    "G:7", circshift(seventh_chord, 7),
+    "G:maj", circshift(major_chord, 7),
+    "B:min", circshift(minor_chord, 11),
+    "D:7", circshift(seventh_chord, 2),
+    "D:maj", circshift(major_chord, 2),
+    "F#:min", circshift(minor_chord, 6),
+    "A:7", circshift(seventh_chord, 9),
+    "A:maj", circshift(major_chord, 9),
+    "C#:min", circshift(minor_chord, 1),
+    "E:7", circshift(seventh_chord, 4),
+    "E:maj", circshift(major_chord, 4),
+    "G#:min", circshift(minor_chord, 8),
+    "B:7", circshift(seventh_chord, 11),
+    "B:maj", circshift(major_chord, 11),
+    "D#:min", circshift(minor_chord, 3)
+  )
+
+key_templates <-
+  tribble(
+    ~name, ~template,
+    "Gb:maj", circshift(major_key, 6),
+    "Bb:min", circshift(minor_key, 10),
+    "Db:maj", circshift(major_key, 1),
+    "F:min", circshift(minor_key, 5),
+    "Ab:maj", circshift(major_key, 8),
+    "C:min", circshift(minor_key, 0),
+    "Eb:maj", circshift(major_key, 3),
+    "G:min", circshift(minor_key, 7),
+    "Bb:maj", circshift(major_key, 10),
+    "D:min", circshift(minor_key, 2),
+    "F:maj", circshift(major_key, 5),
+    "A:min", circshift(minor_key, 9),
+    "C:maj", circshift(major_key, 0),
+    "E:min", circshift(minor_key, 4),
+    "G:maj", circshift(major_key, 7),
+    "B:min", circshift(minor_key, 11),
+    "D:maj", circshift(major_key, 2),
+    "F#:min", circshift(minor_key, 6),
+    "A:maj", circshift(major_key, 9),
+    "C#:min", circshift(minor_key, 1),
+    "E:maj", circshift(major_key, 4),
+    "G#:min", circshift(minor_key, 8),
+    "B:maj", circshift(major_key, 11),
+    "D#:min", circshift(minor_key, 3)
+  )
+
+twenty_five <-
+  get_tidy_audio_analysis("7KXjTSCq5nL1LoYtL7XAwS") %>% #humble
+  compmus_align(sections, segments) %>%
+  select(sections) %>%
+  unnest(sections) %>%
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "mean", norm = "manhattan"
+      )
+  )
+
+twenty_four <-
+  get_tidy_audio_analysis("0Z2J91b2iTGLVTZC4fKgxf") %>% #hit em up
+  compmus_align(sections, segments) %>%
+  select(sections) %>%
+  unnest(sections) %>%
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "mean", norm = "manhattan"
+      )
+  )
+
+```
+
+
+
+#### Chordograms 
+```{r}
+# Chordogram humble
+p5= twenty_five %>% 
+  compmus_match_pitch_template(
+    key_templates,         # Change to chord_templates if descired
+    method = "euclidean",  # Try different distance metrics
+    norm = "manhattan"     # Try different norms
+  ) %>%
+  ggplot(
+    aes(x = start + duration / 2, width = duration, y = name, fill = d)
+  ) +
+  geom_tile() +
+  scale_fill_viridis_c(guide = "none") +
+  theme_minimal() +
+  labs(title= 'Humble by Kendrick Lamar', x = "Time (s)", y = "")
+
+```
+
+```{r chordogams}
+# Chordogram hit em up
+p6 = twenty_four %>% 
+  compmus_match_pitch_template(
+    key_templates,         # Change to chord_templates if descired
+    method = "euclidean",  # Try different distance metrics
+    norm = "manhattan"     # Try different norms
+  ) %>%
+  ggplot(
+    aes(x = start + duration / 2, width = duration, y = name, fill = d)
+  ) +
+  geom_tile() +
+  scale_fill_viridis_c(guide = "none") +
+  theme_minimal() +
+  labs(title= 'Hit em up by 2Pac', x = "Time (s)", y = "")
+```
+
+```{r fig.width = 10}
+ggarrange(p5,p6, ncol = 2, nrow=1)
+
+```
+
+
+
+***
+
+#### Chromagram results analysis
+For the chromagram analysis i have chosen the songs that have the most streams on spotify. 
+When looking at the two chromagrams you can immediately notice that there are more yellow bars in Kendrick lamars song Humble. Most of the yellow bars are in the C# and C pitch classes. These yellow bars indicate that there is more energy meaning that those parts of the song feel louder, noisier and faster. Looking at Tupas his chromagram from the song 'Hit em UP' you can see that there is not much happening throughout the song and it has lower energy levels in comparison to Humble. This indicates that New School hip hop songs have more energy when compared to Old School. And confirms the scatterplot* and density plot we saw in the ''track level chroma features'' tab. 
+
+I personally think that this is also true. I also feel 'higher energy levels' when listening to New School hiphop songs. I think this is because New school hip hop seems to be influenced by pop songs. 
+
+
+#### Cepstogram results analysis
+The cepstogram shows changes in timbre components. What is noticeable is that the cepstogram Humble by Kendrick seems to have more yellow bars, indicating a change with a high magnitude.
+
+
+__Humble__
+
+In the first few seconds of the song you can here the famous intro 'nobody pray for me, it been that day for me'. After that there is a shift to c03. The first verse begins and there are a lot of shifts between c02 and c03 there. After t=50 the chorus begins and there are a few shift to c04. And thenn in the last ±20 seconds there is a shift to c03 this is where the song ends with a chorus. 
+
+__Hit em Up__
+
+As mentioned earlier there are less shifts with a high magnitude in this track. Only in the last few seconds in the outro there is a shift with high magnitude visible. 
+
+
+#### Chordogram results analysis
+Let's take a look at what chords are used the most in the #1 songs of Kendrick Lamar and Tupac. 
+The chords that are used the most are indicated by dark bars along the rows. I have used the Euclidean method and manhattan norm for both chordograms.
+
+__Humble__
+
+Looking at the chordogram the most used chords are in the C#:minor and Db:Major. The vertical yellowish stripes that are visible indicate changes in chords at that time in the song. This happens at t10-t50, t=90 and t=120. Listening to the song Humble you can also hear these changes. 
+
+__Hit em Up__
+
+The most used chords in Hit em Up are C#:minor and A#:minor. The vertical stripes are visible at t=100, t=185 and towards the end of the song t=310. 
+
+
+### Tempo summary
+```{r 3rdplot}
+bebop <-
+  get_playlist_audio_features(
+    "Spotify",
+    "37i9dQZF1DX5EkyRFIV92g" #humble
+  ) %>%
+  slice(1:30) %>%
+  add_audio_analysis()
+bigband <-
+  get_playlist_audio_features(
+    "Spotify",
+    "37i9dQZF1DZ06evO17QsVi" #hit em up
+  ) %>%
+  slice(1:30) %>%
+  add_audio_analysis()
+jazz <-
+  bebop %>%
+  mutate(genre = "This is Kendrick Lamar") %>%
+  bind_rows(bigband %>% mutate(genre = "This is Tupac"))
+```
+
+```{r tempogram}
+# can i add tracjs here?
+
+jazz %>%
+  mutate(
+    sections =
+      map(
+        sections,                                    # sections or segments
+        summarise_at,
+        vars(tempo, loudness, duration),             # features of interest
+        list(section_mean = mean, section_sd = sd)   # aggregation functions
+      )
+  ) %>%
+  unnest(sections) %>%
+  ggplot(
+    aes(
+      x = tempo,
+      y = tempo_section_sd,
+      colour = genre,
+      alpha = loudness
+    )
+  ) +
+  geom_point(aes(size = duration / 60)) +
+  geom_rug() +
+  theme_minimal() +
+  ylim(0, 5) +
+  labs(
+    x = "Mean Tempo (bpm)",
+    y = "SD Tempo",
+    colour = "Genre",
+    size = "Duration (min)",
+    alpha = "Volume (dBFS)"
+  )
+```
+
+***
+
+
+#### Tempogram results analysis 
+The graph on the left shows a track level summary of the mean tempo in beats per minute (x-axis), the standard deviation (spread) of the tempo (y-axis) and the loudness throughout the songs,  which is displayed by the transparency of the dots.Let's unpack what is happening in the plot. 
+
+__Beats per Minute__
+
+We can see that a lot of tracks in the *"This is tupac"* playlist are clustered around 90 bpm. This is not a suprising result since for hip hop songs the average bpm is between 85 and 95 bpm. For the tracks in the *"This is Kendrick Lamar"* there are a lot more tracks that have a higher bpm. This could be because modern rap is more influenced by pop culture and the average bpm for pop songs is around 100-130 bpm. There is also seems to be an outlier for the song "element" from Kendrick Lamar with 190 bpm. In the next tab i will analyze whether this was taken as a double bpm. 
+
+__Loudness__
+
+Tupac has more tracks that are louder. This could indicate that old school hop it was more trendy to create songs with a higher volume. Another thing that could have happened is that tupac is tracks were made louder when they were remastered.
+
+__Tempo Variety__
+
+Most tracks do not have a high variety in tempo. There hower is an outlier  around 4.5 SD. This is the track 'Poetic Justice' by Kenderick Lamar Ft Drake. 
+
+### Tempogram outlier
+
+```{r}
+# put outlier here 
+graveola <- get_tidy_audio_analysis("1EaKU4dMbesXXd3BrLCtYG") # element
+
+```
+
+```{r}
+graveola %>%
+  tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) %>%
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(title= "Tempogram for Element by Kendrick Lamar", x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+***
+#### Tempogram results analysis
+As discussed in the previous page there was an outlier at around 190 bpm. I suspected that was too high to be true by listening to the song. This tempogram confirms my suspicion. It was taken in as a double by the algorithm resulting in 190 bpm in the graph but in reality it is around 95 bpm. 
+
+### Average timbre coefficents {data-commentary-width=300}
+
+```{r}
+jazz %>%
+  mutate(
+    timbre =
+      map(
+        segments,
+        compmus_summarise,
+        timbre,
+        method = "mean"
+      )
+  ) %>%
+  select(genre, timbre) %>%
+  compmus_gather_timbre() %>%
+  ggplot(aes(x = basis, y = value, fill = genre)) +
+  geom_violin() +
+  scale_fill_viridis_d() +
+  labs(x = "Spotify Timbre Coefficients", y = "", fill = "Genre")
+```
+
+***
+
+#### Average timbre coefficents results - analysis
+In c01 the loudness of the tracks is displayed. you can see that they both have equal height but the tupac tracks are bit longer, meaning that they are more loud. Also in c12 the clock of the kendrick lamar playlist seems to be longer then the tupac playlist. Furthermore in most of the timbre coefficents both playlists seem to be the same. 
+
+
+
+### Classification {data-commentary-width=300}
+
+```{r}
+get_conf_mat <- function(fit) {
+  outcome <- .get_tune_outcome_names(fit)
+  fit %>% 
+    collect_predictions() %>% 
+    conf_mat(truth = outcome, estimate = .pred_class)
+}  
+
+get_pr <- function(fit) {
+  fit %>% 
+    conf_mat_resampled() %>% 
+    group_by(Prediction) %>% mutate(precision = Freq / sum(Freq)) %>% 
+    group_by(Truth) %>% mutate(recall = Freq / sum(Freq)) %>% 
+    ungroup() %>% filter(Prediction == Truth) %>% 
+    select(class = Prediction, precision, recall)
+}  
+```
+
+
+```{r 4th plot}
+pop <- 
+  get_playlist_audio_features("spotify", "37i9dQZF1DX5EkyRFIV92g") #kendrick
+party <- get_playlist_audio_features("spotify", "37i9dQZF1DZ06evO17QsVi") #tupac
+indie <-
+  bind_rows(
+    pop %>% mutate(playlist = "This is Kendrick Kamar") %>% slice_head(n = 20),
+    party %>% mutate(playlist = "This is Tupac") %>% slice_head(n = 20)
+  ) 
+
+
+```
+
+```{r}
+indie_features <-
+  indie %>%  # For your portfolio, change this to the name of your corpus.
+  add_audio_analysis() %>% 
+  mutate(
+    playlist = factor(playlist),
+    segments = map2(segments, key, compmus_c_transpose),
+    pitches =
+      map(
+        segments,
+        compmus_summarise, pitches,
+        method = "mean", norm = "manhattan"
+      ),
+    timbre =
+      map(
+        segments,
+        compmus_summarise, timbre,
+        method = "mean",
+      )
+  ) %>%
+  mutate(pitches = map(pitches, compmus_normalise, "clr")) %>%
+  mutate_at(vars(pitches, timbre), map, bind_rows) %>%
+  unnest(cols = c(pitches, timbre))
+
+```
+
+
+```{r}
+indie_recipe <-
+  recipe(
+    playlist ~
+      danceability +
+      energy +
+      loudness +
+      speechiness +
+      acousticness +
+      instrumentalness +
+      liveness +
+      valence +
+      tempo +
+      duration +
+      C + `C#|Db` + D + `D#|Eb` +
+      E + `F` + `F#|Gb` + G +
+      `G#|Ab` + A + `A#|Bb` + B +
+      c01 + c02 + c03 + c04 + c05 + c06 +
+      c07 + c08 + c09 + c10 + c11 + c12,
+    data = indie_features,          # Use the same name as the previous block.
+  ) %>%
+  step_center(all_predictors()) %>%
+  step_scale(all_predictors())      # Converts to z-scores.
+  # step_range(all_predictors())    # Sets range to [0, 1].
+```
+
+```{r}
+#cross validation
+indie_cv <- indie_features %>% vfold_cv(5)
+
+```
+
+
+#### Knn Classification
+<center>
+
+<img src="Git CM/knn2.png" >
+
+</center>
+
+
+
+
+***
+
+#### Description
+I used the KNN algorithm to perform classifiction on my two playlists. It had a around 0.60 and a 0.50 recall. Based on these metrics i do not think KNN is a suitable way to perform classification with the spotify API because the model has a low performance. 
+
+
+### Random forest clustering
+
+```{r}
+forest_model <-
+  rand_forest() %>%
+  set_mode("classification") %>% 
+  set_engine("ranger", importance = "impurity")
+indie_forest <- 
+  workflow() %>% 
+  add_recipe(indie_recipe) %>% 
+  add_model(forest_model) %>% 
+  fit_resamples(
+    indie_cv, 
+    control = control_resamples(save_pred = TRUE)
+  )
+```
+
+
+#### Feature bar plot
+```{r}
+workflow() %>% 
+  add_recipe(indie_recipe) %>% 
+  add_model(forest_model) %>% 
+  fit(indie_features) %>% 
+  pluck("fit", "fit", "fit") %>%
+  ranger::importance() %>% 
+  enframe() %>% 
+  mutate(name = fct_reorder(name, value)) %>% 
+  ggplot(aes(name, value)) + 
+  geom_col() + 
+  coord_flip() +
+  theme_minimal() +
+  labs(x = NULL, y = "Importance")
+```
+
+
+```{r}
+plot10 = 
+indie_features %>%
+  ggplot(aes(x = c01, y = c02, colour = playlist, size = energy)) +
+  geom_point(alpha = 0.8) +
+  scale_color_viridis_d() +
+  labs(
+    x = "Tempo",
+    y = "Danceability",
+    size = "Energy",
+    colour = "Playlist"
+  )
+ggplotly(plot10)
+```
+***
+
+#### Results 
+__Barplot__
+
+The barplot shows the features that differentiate the Kendrick Lamar and Tupac playlists. The most important feature is the c12 timbre coeficcent followed by tempo, danceability, valence and duration. 
+
+Within this project i have not talked about the duration of the songs yet. I think indeed  this is also an important feature that differentiates the two playlists because tupac his playlist almost only contains songs that are about 5 minutes long. This is shorter for Kendrick his playlist. I think this generalizes well to old school hiphop and new school hip hop as well.I noticed too that a lot of the newer hip hop songs tend be far shorter then the old school hip hop songs. 
+
+__Scatterplot__
+
+The scatterplot shows how the tracks are distributed with on the y-axis the danceabilty and the x-asis the tempo. The size of the dots indicated the energy. There are no clear clusters visible meaning that the playlists do not totally differ from eachother. I also did not expect any noticable clusters because they both still are hiphop playlists. What is noticable is that the kendrick lamar tracks are more spread out on the graph. 
+
+
+
+### Conclusion
+
+<center>
+For this project i have analyzed two playlists, 'this is kendrick lamar' and 'this is tupac' with the spotify API. This is done to see if there are any distiguable difference between old school and new school hiphop. Spotify API in combination with R gives the opportunity to easily analyze musical data.
+
+It can be concluded that Kendrick Lamar representing new school hiphop makes tracks with higher tempo, bpm and more energy. The reason for this is probably because new school hop being influenced by pop culture.This could mean that people who tend to like old school hip hop more do not like songs that have higher tempo and energy to it. Another results that suprised me was that tupac had songs with the highest valence in it. I did not expect this because he tends to create songs that are less positive because they often are about violence and unfairness. I do think that if i chose another artist to compare tupac with (for example drake) the valence would be higher for Drake. This because Kendrick lamar is know for creating songs that do not have a lot of positiveness to it. In the clustering, using random forrest, we could see that there are no clear clusters. This is not suprising since the two playlists are still in the same genre hiphop. 
+
+I think that both old and new school have songs that are great regardless of the time they were created in. However (i might be a bit biased because i really like tupac) i still think that old school hiphop is the best. I barerly come across a 90's hiphop song that i do not like at all and i can not say the same about new school hiphop. 
+
+
+
+<img src="Git CM/wallpaper.jpeg" >
+
+
+</center>
